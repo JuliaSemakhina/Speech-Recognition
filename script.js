@@ -1,115 +1,73 @@
-const draggable_list = document.getElementById('draggable-list');
-const check = document.getElementById('check');
+const msgEl = document.getElementById('msg');
 
-const largestCountry = [
-	'Russia',
-	'Canada',
-	'United States',
-	'China',
-	'Brazil',
-	'Australia',
-	'India',
-	'Argentina',
-	'Kazakhstan',
-	'Algeria'
-];
+const randomNum = getRandomNumber();
 
-//Store List Items
-const listItems = [];
+window.SpeechRecognition = window.SpeechRecognition ||
+window.webkitSpeechRecognition;
 
-let dragStartIndex;
+let recognition = new window.SpeechRecognition();
 
-createList();
+//Start recognition and game
+recognition.start();
 
-//Insert list items into DOM
 
-function createList() {
-	[...largestCountry]
-	.map(a => ({ value: a, sort: Math.random()}))
-	.sort((a,b)=> a.sort - b.sort)
-	.map(a=> a.value)
-	.forEach((country, index)=> {
-		console.log(country);
+//Capture user speak
+function onSpeak(e) {
+	const msg = e.results[0][0].transcript;
 
-		const listItem= document.createElement('li');
-
-		listItem.setAttribute('data-index', index);
-
-		listItem.innerHTML = `   
-			<span class="number">${index + 1}</span>
-			<div class="draggable" draggable="true">
-			<p class="country-name">${country}</p>
-			<i class='fas fa-grip-lines'></i>
-			</div>
-		`;
-		listItems.push(listItem);
-		draggable_list.appendChild(listItem);
-	});
-
-	addeventListeners();
+	writeMessage(msg);
+	checkNumber(msg);
+	console.log(msg);
 }
 
-function dragStart(){
-	dragStartIndex = +this.closest('li').getAttribute('data-index');
+//Write what user speaks
+function writeMessage(msg){
+	msgEl.innerHTML = `
+	<div> You said:</div>
+	<span class="box">${msg}</span>	`
 }
 
-function dragEnter(){
-	this.classList.add('over');
+//Check message against number
+function checkNumber(msg) {
+	const num = +msg;
+	if(Number.isNaN(num)){
+		msgEl.innerHTML += '<div>That is not a valid number</div>';
+		return;
+	}
+	if(num > 100 || num < 1){
+		msgEl.innerHTML += '<div>Number must be between 1 and 100</div>';
+		return;
+	}
+	//Check number 
+	if(num === randomNum){
+		document.body.innerHTML = ` 
+		<h2>Congrats! You have guessed the number! <br><br>
+		It was ${num}</h2>
+		<button class="play-again" id="play-again">Play Again!</button>
+		`
+	} else if(num > randomNum){
+		msgEl.innerHTML += '<div>GO LOWER!</div>'
+	} else {
+		msgEl.innerHTML += '<div>GO HIGHER!</div>'
+	}
+	
 }
 
-function dragOver(e){
-	e.preventDefault();
+//Generate Random number
+function getRandomNumber() {
+	return Math.floor(Math.random()*100) +1;
 }
 
-function dragLeave(){
-	this.classList.remove('over');
-}
+console.log('Number:', randomNum);
 
-function dragDrop(){
-	const dragEndIndex = +this.getAttribute('data-index');
-	swapItems(dragStartIndex, dragEndIndex);
-	this.classList.remove('over');
-	console.log(dragEndIndex);
-}
+//Speak result
+recognition.addEventListener('result', onSpeak);
 
+//End SR servce
+recognition.addEventListener('end', ()=> recognition.start());
 
-//Swap list items
-function swapItems(fromIndex, toIndex){
-	const itemOne = listItems[fromIndex].querySelector('.draggable');
-	const itemTwo = listItems[toIndex].querySelector('.draggable');
-	listItems[fromIndex].appendChild(itemTwo);
-	listItems[toIndex].appendChild(itemOne);
-}
-
-
-//Check the order of the list items on button click
-function checkOrder() {
-	listItems.forEach((listItem,index)=> {
-		const countryName = listItem.querySelector('.draggable').innerText.trim();
-		if(countryName !== largestCountry[index]){
-			listItem.classList.add('wrong');
-		} else {
-			listItem.classList.remove('wrong');
-			listItem.classList.add('right');
-		}
-	})
-}
-
-
-function addeventListeners(){
-	const draggables = document.querySelectorAll('.draggable');
-	const dragListItems = document.querySelectorAll('.draggable-list li');
-
-	draggables.forEach(draggable=> {
-		draggable.addEventListener('dragstart', dragStart)
-		});
-
-	dragListItems.forEach(item=> {
-		item.addEventListener('dragover', dragOver)
-		item.addEventListener('drop', dragDrop)
-		item.addEventListener('dragenter', dragEnter)
-		item.addEventListener('dragleave', dragLeave);
-});
-}
-
-check.addEventListener('click', checkOrder);
+document.body.addEventListener('click', (e)=>{
+	if(e.target.id === 'play-again'){
+		window.location.reload();
+	}
+})
